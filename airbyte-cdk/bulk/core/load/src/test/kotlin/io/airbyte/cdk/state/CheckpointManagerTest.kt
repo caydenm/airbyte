@@ -5,15 +5,13 @@
 package io.airbyte.cdk.state
 
 import com.google.common.collect.Range
-import com.google.common.collect.RangeSet
-import com.google.common.collect.TreeRangeSet
 import io.airbyte.cdk.command.DestinationCatalog
 import io.airbyte.cdk.command.DestinationStream
 import io.airbyte.cdk.command.MockCatalogFactory.Companion.stream1
 import io.airbyte.cdk.command.MockCatalogFactory.Companion.stream2
-import io.airbyte.cdk.message.Batch
-import io.airbyte.cdk.message.BatchEnvelope
 import io.airbyte.cdk.message.MessageConverter
+import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Prototype
 import io.micronaut.context.annotation.Requires
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
@@ -73,67 +71,13 @@ class CheckpointManagerTest {
         }
     }
 
-    /**
-     * The only thing we really need is `areRecordsPersistedUntil`. (Technically we're emulating the
-     * @[StreamManager] behavior here, since the state manager doesn't actually know what ranges are
-     * closed, but less than that would make the test unrealistic.)
-     */
-    class MockStreamManager : StreamManager {
-        var persistedRanges: RangeSet<Long> = TreeRangeSet.create()
-
-        override fun countRecordIn(): Long {
-            throw NotImplementedError()
-        }
-
-        override fun countEndOfStream(): Long {
-            throw NotImplementedError()
-        }
-
-        override fun markCheckpoint(): Pair<Long, Long> {
-            throw NotImplementedError()
-        }
-
-        override fun <B : Batch> updateBatchState(batch: BatchEnvelope<B>) {
-            throw NotImplementedError()
-        }
-
-        override fun isBatchProcessingComplete(): Boolean {
-            throw NotImplementedError()
-        }
-
-        override fun areRecordsPersistedUntil(index: Long): Boolean {
-            return persistedRanges.encloses(Range.closedOpen(0, index))
-        }
-
-        override fun markClosed() {
-            throw NotImplementedError()
-        }
-
-        override fun streamIsClosed(): Boolean {
-            throw NotImplementedError()
-        }
-
-        override suspend fun awaitStreamClosed() {
-            throw NotImplementedError()
-        }
-    }
-
-    @Prototype
-    @Requires(env = ["StateManagerTest"])
-    class MockStreamsManager(@Named("mockCatalog") catalog: DestinationCatalog) : StreamsManager {
-        private val mockManagers = catalog.streams.associateWith { MockStreamManager() }
-
-        fun addPersistedRanges(stream: DestinationStream, ranges: List<Range<Long>>) {
-            mockManagers[stream]!!.persistedRanges.addAll(ranges)
-        }
-
-        override fun getManager(stream: DestinationStream): StreamManager {
-            return mockManagers[stream]
-                ?: throw IllegalArgumentException("Stream not found: $stream")
-        }
-
-        override suspend fun awaitAllStreamsClosed() {
-            throw NotImplementedError()
+    @Factory
+    class MockStreamsManagerFactory {
+        @Prototype
+        @Primary
+        @Requires(env = ["StateManagerTest"])
+        fun make(catalog: DestinationCatalog): MockStreamsManager {
+            return MockStreamsManager(catalog)
         }
     }
 
