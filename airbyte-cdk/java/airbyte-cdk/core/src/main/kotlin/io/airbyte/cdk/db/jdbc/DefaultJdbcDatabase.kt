@@ -51,11 +51,8 @@ constructor(
         val connection = dataSource.connection
         return JdbcDatabase.Companion.toUnsafeStream<T>(query.apply(connection), recordTransform)
             .onClose {
-                try {
-                    connection.close()
-                } catch (e: SQLException) {
-                    throw RuntimeException(e)
-                }
+                LOGGER.info { "closing connection $connection" }
+                connection.close()
             }
     }
 
