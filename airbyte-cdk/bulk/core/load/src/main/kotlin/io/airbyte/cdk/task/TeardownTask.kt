@@ -4,7 +4,6 @@
 
 package io.airbyte.cdk.task
 
-import io.airbyte.cdk.state.StreamsManager
 import io.airbyte.cdk.write.DestinationWrite
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Secondary

@@ -7,11 +7,11 @@ package io.airbyte.cdk.task
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import io.airbyte.cdk.command.DestinationCatalog
 import io.airbyte.cdk.command.DestinationStream
+import io.airbyte.cdk.message.Batch
 import io.airbyte.cdk.message.BatchEnvelope
 import io.airbyte.cdk.message.CheckpointMessage
-import io.airbyte.cdk.state.CheckpointManager
-import io.airbyte.cdk.message.Batch
 import io.airbyte.cdk.message.SpilledRawMessagesLocalFile
+import io.airbyte.cdk.state.CheckpointManager
 import io.airbyte.cdk.state.StreamsManager
 import io.airbyte.cdk.write.StreamLoader
 import io.github.oshai.kotlinlogging.KotlinLogging

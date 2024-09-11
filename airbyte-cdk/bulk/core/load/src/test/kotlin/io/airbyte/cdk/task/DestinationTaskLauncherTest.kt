@@ -12,14 +12,16 @@ import io.airbyte.cdk.command.MockCatalogFactory.Companion.stream1
 import io.airbyte.cdk.command.MockCatalogFactory.Companion.stream2
 import io.airbyte.cdk.message.Batch
 import io.airbyte.cdk.message.BatchEnvelope
+import io.airbyte.cdk.message.CheckpointMessage
 import io.airbyte.cdk.message.DestinationRecord
 import io.airbyte.cdk.message.SimpleBatch
 import io.airbyte.cdk.message.SpilledRawMessagesLocalFile
+import io.airbyte.cdk.state.CheckpointManager
 import io.airbyte.cdk.state.MockStreamManager
 import io.airbyte.cdk.state.MockStreamsManager
 import io.airbyte.cdk.state.StreamsManager
+import io.airbyte.cdk.write.DestinationWrite
 import io.airbyte.cdk.write.StreamLoader
-import io.airbyte.cdk.write.StreamLoaderFactory
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Replaces
@@ -40,6 +42,7 @@ class DestinationTaskLauncherTest {
     @Inject lateinit var taskRunner: TaskRunner
     @Inject lateinit var taskLauncherFactory: DestinationTaskLauncherFactory
     @Inject lateinit var streamsManager: StreamsManager
+    @Inject lateinit var checkpointManager: MockCheckpointManager
 
     @Inject lateinit var mockSetupTaskFactory: MockSetupTaskFactory
     @Inject lateinit var mockSpillToDiskTaskFactory: MockSpillToDiskTaskFactory
@@ -189,8 +192,34 @@ class DestinationTaskLauncherTest {
         }
     }
 
-    class MockStreamLoaderFactory : StreamLoaderFactory {
-        override fun make(stream: DestinationStream): StreamLoader {
+    @Singleton
+    @Primary
+    @Requires(env = ["DestinationTaskLauncherTest"])
+    class MockCheckpointManager : CheckpointManager<DestinationStream, CheckpointMessage> {
+        val hasBeenFlushed = Channel<Unit>()
+
+        override fun addStreamCheckpoint(
+            key: DestinationStream,
+            index: Long,
+            checkpointMessage: CheckpointMessage
+        ) {
+            TODO("Not needed")
+        }
+
+        override fun addGlobalCheckpoint(
+            keyIndexes: List<Pair<DestinationStream, Long>>,
+            checkpointMessage: CheckpointMessage
+        ) {
+            TODO("Not needed")
+        }
+
+        override suspend fun flushReadyCheckpointMessages() {
+            hasBeenFlushed.send(Unit)
+        }
+    }
+
+    class MockDestinationWrite : DestinationWrite {
+        override fun getStreamLoader(stream: DestinationStream): StreamLoader {
             return object : StreamLoader {
                 override val stream: DestinationStream = stream
 
@@ -245,8 +274,8 @@ class DestinationTaskLauncherTest {
         Assertions.assertTrue(processRecordsHasRun.isFailure)
 
         // This should unblock the processRecords task.
-        val loaderFactory = MockStreamLoaderFactory()
-        launcher.handleStreamOpen(loaderFactory.make(stream1))
+        val destination = MockDestinationWrite()
+        launcher.handleStreamOpen(destination.getStreamLoader(stream1))
         processRecordsTaskFactory.hasRun.receive()
         Assertions.assertTrue(true)
 
@@ -260,8 +289,8 @@ class DestinationTaskLauncherTest {
 
         val range = TreeRangeSet.create(listOf(Range.closed(0L, 100L)))
 
-        val loaderFactory = MockStreamLoaderFactory()
-        val streamLoader = loaderFactory.make(stream1)
+        val destination = MockDestinationWrite()
+        val streamLoader = destination.getStreamLoader(stream1)
         launcher.handleStreamOpen(streamLoader)
 
         // Verify incomplete batch triggers process batch
@@ -296,6 +325,8 @@ class DestinationTaskLauncherTest {
         delay(1000)
         val hasRun = teardownTaskFactory.hasRun.tryReceive()
         Assertions.assertTrue(hasRun.isFailure)
+        checkpointManager.hasBeenFlushed.receive() // Stream1 close triggered flush
+
         streamsManager.getManager(stream1).markClosed()
         delay(1000)
         val hasRun2 = teardownTaskFactory.hasRun.tryReceive()
@@ -309,6 +340,7 @@ class DestinationTaskLauncherTest {
         delay(1000)
         val hasRun3 = teardownTaskFactory.hasRun.tryReceive()
         Assertions.assertTrue(hasRun3.isFailure)
+        checkpointManager.hasBeenFlushed.receive() // Stream2 close triggered flush
 
         launcher.stop()
     }
