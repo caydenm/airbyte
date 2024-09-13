@@ -19,12 +19,17 @@ import javax.validation.constraints.Min
 
 /**
  * This doesn't quite conform with the old spec:
- *  - Some fields that make more sense as integral need to be Double to yield a "number" type
- *  - Due to https://github.com/mbknor/mbknor-jackson-jsonSchema/issues/184, this causes
+ * - Some fields that make more sense as integral need to be Double to yield a "number" type
+ * - Due to https://github.com/mbknor/mbknor-jackson-jsonSchema/issues/184, this causes
+ * ```
  *    `@JsonSchemaExamples` to break. Instead, we inject a raw JSON blob to the schema.
- *  - Similarly, there are some cases where [JsonSchemaTitle] / [JsonClassDescription]
+ * ```
+ * - Similarly, there are some cases where [JsonSchemaTitle] / [JsonClassDescription]
+ * ```
  *    don't work as expected. In these cases, we also inject raw JSON.
- *  - Additionally, there are extra fields:
+ * ```
+ * - Additionally, there are extra fields:
+ * ```
  *    - "additionalProperties: true" appears throughout (not helped by @JsonIgnoreProperties)
  *    - "type": "object" is appended to the case classes
  * ```
@@ -105,7 +110,9 @@ data class FirstNEntriesConfig(
 ) : LoggingConfig(loggingType)
 
 @JsonSchemaTitle("Every N-th Entry")
-@JsonSchemaInject(json = """{"description":"For each stream, log every N-th entry with a maximum cap."}""")
+@JsonSchemaInject(
+    json = """{"description":"For each stream, log every N-th entry with a maximum cap."}"""
+)
 data class EveryNthEntryConfig(
     @JsonProperty("logging_type") override val loggingType: Type = Type.EVERY_NTH,
     @JsonSchemaTitle("N")
@@ -117,9 +124,10 @@ data class EveryNthEntryConfig(
     @Max(1000)
     @Min(1)
     val nthEntryToLog: Int,
-
     @JsonSchemaTitle("Max Log Entries")
-    @JsonPropertyDescription("Number of entries to log. This destination is for testing only. So it won't make sense to log infinitely. The maximum is 1,000 entries.")
+    @JsonPropertyDescription(
+        "Number of entries to log. This destination is for testing only. So it won't make sense to log infinitely. The maximum is 1,000 entries."
+    )
     @JsonProperty("max_entry_count", defaultValue = "100")
     @JsonSchemaInject(json = """{"examples":[100]}""")
     @Max(1000)
@@ -128,7 +136,10 @@ data class EveryNthEntryConfig(
 ) : LoggingConfig(loggingType)
 
 @JsonSchemaTitle("Random Sampling")
-@JsonSchemaInject(json = """{"description":"For each stream, randomly log a percentage of the entries with a maximum cap."}""")
+@JsonSchemaInject(
+    json =
+        """{"description":"For each stream, randomly log a percentage of the entries with a maximum cap."}"""
+)
 data class RandomSamplingConfig(
     @JsonProperty("logging_type") override val loggingType: Type = Type.RANDOM_SAMPLING,
     @JsonSchemaTitle("Sampling Ratio")
@@ -139,13 +150,16 @@ data class RandomSamplingConfig(
     @Min(0)
     val samplingRatio: Double = 0.001,
     @JsonSchemaTitle("Random Number Generator Seed")
-    @JsonPropertyDescription("When the seed is unspecified, the current time millis will be used as the seed.")
+    @JsonPropertyDescription(
+        "When the seed is unspecified, the current time millis will be used as the seed."
+    )
     @JsonSchemaInject(json = """{"examples":[1900]}""")
     @JsonProperty("seed")
     val seed: Double? = null,
-
     @JsonSchemaTitle("Max Log Entries")
-    @JsonPropertyDescription("Number of entries to log. This destination is for testing only. So it won't make sense to log infinitely. The maximum is 1,000 entries.")
+    @JsonPropertyDescription(
+        "Number of entries to log. This destination is for testing only. So it won't make sense to log infinitely. The maximum is 1,000 entries."
+    )
     @JsonProperty("max_entry_count", defaultValue = "100")
     @JsonSchemaInject(json = """{"examples":[100]}""")
     @Max(1000)

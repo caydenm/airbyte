@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.cdk.test.spec
 
 import com.deblock.jsondiff.DiffGenerator
@@ -12,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.cdk.test.util.DestinationProcessFactory
 import io.airbyte.cdk.test.util.FakeDataDumper
 import io.airbyte.cdk.test.util.IntegrationTest
+import io.airbyte.cdk.test.util.NoopDestinationCleaner
 import io.airbyte.cdk.test.util.NoopExpectedRecordMapper
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.protocol.models.v0.AirbyteMessage
@@ -24,18 +29,19 @@ import org.junit.jupiter.api.Test
 private const val EXPECTED_SPEC_FILENAME = "expected_spec.json"
 
 /**
- * This is largely copied from [io.airbyte.cdk.spec.SpecTest], but adapted to
- * use our [DestinationProcessFactory].
+ * This is largely copied from [io.airbyte.cdk.spec.SpecTest], but adapted to use our
+ * [DestinationProcessFactory].
  *
- * It also automatically writes the actual spec back to `expected_spec.json`
- * for easier inspection of the diff. This diff is _really messy_ for the
- * initial migration from the old CDK to the new one, but after that, it should
- * be pretty readable.
+ * It also automatically writes the actual spec back to `expected_spec.json` for easier inspection
+ * of the diff. This diff is _really messy_ for the initial migration from the old CDK to the new
+ * one, but after that, it should be pretty readable.
  */
-open abstract class SpecTest: IntegrationTest(
-    FakeDataDumper,
-    NoopExpectedRecordMapper(),
-) {
+open abstract class SpecTest :
+    IntegrationTest(
+        FakeDataDumper,
+        NoopDestinationCleaner,
+        NoopExpectedRecordMapper,
+    ) {
     @Test
     fun testSpec() {
         val expectedSpec = Files.readString(Path.of(EXPECTED_SPEC_FILENAME))
